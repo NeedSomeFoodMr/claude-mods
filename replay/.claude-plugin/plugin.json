@@ -1,0 +1,6 @@
+{
+  "name": "replay",
+  "version": "0.1.0",
+  "description": "Records the file edits of the last turn and steps through them as diffs in a pane.",
+  "types": "./types/index.d.ts"
+}

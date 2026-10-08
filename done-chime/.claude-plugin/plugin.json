@@ -1,0 +1,5 @@
+{
+  "name": "done-chime",
+  "version": "0.1.0",
+  "description": "A toast and a system sound when a long turn finishes, and a sound when Claude is waiting on a permission answer."
+}

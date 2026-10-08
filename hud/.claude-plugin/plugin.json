@@ -1,0 +1,6 @@
+{
+  "name": "hud",
+  "version": "0.3.1",
+  "description": "One row above the prompt: the context window as a coloured bar by what fills it, the rate-limit windows, the session's cost and the dev server, and the branch with how far it is from main.",
+  "types": "./types/index.d.ts"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "quick-prompts",
+  "version": "0.1.0",
+  "description": "A row of buttons above the prompt that drop a saved prompt into the prompt box. Hidden until /quick-prompts shows it.",
+  "types": "./types/index.d.ts"
+}

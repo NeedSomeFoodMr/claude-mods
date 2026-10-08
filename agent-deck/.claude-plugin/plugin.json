@@ -1,0 +1,6 @@
+{
+  "name": "agent-deck",
+  "version": "0.4.0",
+  "description": "A pane showing the main loop and every subagent of the session as pixel crabs, each under its role's hat: a short name, role, model, plan progress, context fill, tokens, estimated cost and time, with totals on top and the finished ones kept below; while agents work, one line above the prompt says how the run stands.",
+  "types": "./types/index.d.ts"
+}

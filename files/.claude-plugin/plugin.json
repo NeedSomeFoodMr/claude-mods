@@ -1,0 +1,6 @@
+{
+  "name": "files",
+  "version": "0.5.0",
+  "description": "A pane for finding and reading files without asking the model: an explorer with search by name that lights up the files Claude reads, writes and commits as it works and can follow it into closed folders, a search inside the files, git's changes since the last commit or against main with a diff of each, the type checker's errors, and a switch to another repository's folder.",
+  "types": "./types/index.d.ts"
+}

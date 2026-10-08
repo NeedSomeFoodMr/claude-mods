@@ -1,0 +1,6 @@
+{
+  "name": "goals",
+  "version": "0.1.0",
+  "description": "A goals list above the prompt that Claude keeps current as it works: what is done, what it is on, and what comes next. Kept per project across sessions.",
+  "types": "./types/index.d.ts"
+}
