@@ -390,9 +390,18 @@ export const settled = (
   }
 }
 
+/**
+ * Its plan as it stands. An agent cannot mark the step it reports in as done
+ * before it has reported, so its last plan always ends with one step in hand:
+ * once it has completed, that step is done. A step it never began stays as it
+ * was posted, and so does every step of one that failed or was stopped.
+ */
+export const stepsOf = (row: AgentRow): Step[] =>
+  (row.steps ?? []).map(one => (row.status === 'completed' && one.status === 'doing' ? { ...one, status: 'done' } : one))
+
 /** How far through its plan: steps done, steps in all, and the one in hand; undefined where it posted none. */
 export const progressOf = (row: AgentRow) => {
-  const steps = row.steps ?? []
+  const steps = stepsOf(row)
 
   return steps.length === 0
     ? undefined
@@ -473,7 +482,7 @@ export const stripOf = (rows: readonly AgentRow[]): Strip | null => {
   const since = Math.min(...busy.map(one => one.startedAt))
   const past = rows.filter(one => !isLive(one) && (one.endedAt ?? one.startedAt) >= since)
   const run = [...busy, ...past]
-  const plan = run.flatMap(one => one.steps ?? [])
+  const plan = run.flatMap(stepsOf)
   const { usd, unpriced } = totals(run, 0)
 
   return {

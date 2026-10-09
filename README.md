@@ -16,6 +16,23 @@ Each mod works without the others, and the agents work without the mods.
 | `quick-prompts` | A row of saved prompts; a press drops one into the prompt box. Edit `quick-prompts/hooks/prompts.ts` to make them yours. | `/quick-prompts` |
 | `done-chime` | A toast and a system sound when a long turn finishes or a permission answer is needed. The sound plays on Windows; on macOS it should, but that is untried; on Linux there is none. | nothing: it runs by itself |
 
+### What three of them look like
+
+These pictures are the mods' own drawings, made from sample data in a made-up project. In a
+session the app puts its buttons around them.
+
+`hud`, above the prompt:
+
+![The hud card: the context window as a coloured bar, rate limits, session cost, dev server and git branch](docs/hud.png)
+
+`goals`, above the prompt:
+
+![The goals list: two done, one in hand, two to do](docs/goals.png)
+
+`agent-deck`, the strip above the prompt and the pane:
+
+![The agents pane: the main loop, two running agents with their plans, two finished, and the team](docs/agent-deck.png)
+
 ## The helper agents
 
 Five subagent definitions in `agents/`, each a role with its own tools and its own model:

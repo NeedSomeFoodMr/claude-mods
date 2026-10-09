@@ -160,6 +160,28 @@ test('says what a tool was called with, and reads a posted plan', () => {
   ).toEqual({ done: 1, total: 3, doing: 'Draw' })
 })
 
+test('counts the step in hand as done once the agent has completed, and only then', () => {
+  // The plan every agent leaves behind: it reports in its last step, and cannot mark that step done first.
+  const steps = [
+    { title: 'Read', status: 'done' as const },
+    { title: 'Report', status: 'doing' as const },
+  ]
+  const skipped = [...steps, { title: 'Never begun', status: 'todo' as const }]
+
+  expect(progressOf(row('a', { status: 'completed', endedAt: 5, steps }))).toEqual({ done: 2, total: 2, doing: undefined })
+  expect(progressOf(row('a', { status: 'completed', endedAt: 5, steps: skipped }))).toEqual({ done: 2, total: 3, doing: undefined })
+
+  for (const status of ['running', 'idle', 'failed', 'killed']) {
+    expect(progressOf(row('a', { status, steps }))).toEqual({ done: 1, total: 2, doing: 'Report' })
+  }
+
+  // The line above the prompt counts the same way, and the row as kept is not rewritten.
+  const kept = row('z', { status: 'completed', startedAt: 10, endedAt: 500, steps })
+
+  expect(stripOf([row('b', { startedAt: 5 }), kept])).toMatchObject({ running: 1, finished: 1, done: 2, steps: 2 })
+  expect(kept.steps).toEqual(steps)
+})
+
 test('prices the four counts at the list rates, and prices nothing it has no rate or count for', () => {
   // 1000 in at $4, 2000 out at $20, 100k read at $0.20, 10k written at $5, each per million.
   expect(micro(costOf(spend(1000, 2000, 100_000, 10_000), 'claude-opus-5-5'))).toBe(114_000)
@@ -767,7 +789,8 @@ test('lists a spawned agent under a name, tells the model who it is, then marks 
 
   // No session figure here (the host measured nothing): the agents' estimate alone, named as theirs.
   expect(await after.find({ type: 'Text', text: 'agents cost ≈$0.01 est. · 2k tokens · 0:03 agent time' })).toBeDefined()
-  expect(await after.find({ type: 'Text', text: /steps 0\/2 · 2k tok · ≈\$0\.01/ })).toBeDefined()
+  // It completed, so the step it had in hand is done; the one it never began is not.
+  expect(await after.find({ type: 'Text', text: /steps 1\/2 · 2k tok · ≈\$0\.01/ })).toBeDefined()
   await after.unmount()
 
   const ui = await $.ui.mount({
