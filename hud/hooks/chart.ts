@@ -1,6 +1,6 @@
 import type { Category, Dev, Reading, Standing, Usage } from '../types'
 import { besideOf, nameOf } from './branch'
-import { compact, levelOf, longLimit, money, resetsIn, share, shortLimit } from './format'
+import { compact, fullness, levelOf, longLimit, money, resetsIn, roomOf, share, shortLimit } from './format'
 import type { Level } from './format'
 
 export type Slice = { name: string; tokens: number; color: string }
@@ -74,13 +74,13 @@ export const slices = (categories: readonly Category[]): Slice[] => {
   return [...named, { name: 'other', tokens: rest, color: OTHER }].filter(one => one.tokens > 0)
 }
 
-// The window as one rounded bar: a segment per slice, the rest of the track
-// free space, a tick where compaction runs. The breakdown is an estimate, so
+// The room as one rounded bar, its end where compaction runs: a segment per
+// slice, the rest of the track free space. The breakdown is an estimate, so
 // it is fitted to the tokens the API counted; a slice too thin to see joins
 // `other`, and the bar never draws a sliver.
 const bar = (card: Card, top: number, height: number, ink: string) => {
   const { reading } = card
-  const scale = WIDTH / Math.max(1, reading.window)
+  const scale = WIDTH / Math.max(1, roomOf(reading, card.compactAt))
   const all = slices(card.categories)
   const total = all.reduce((sum, one) => sum + one.tokens, 0)
   const fit = total > 0 ? reading.tokens / total : 1
@@ -101,17 +101,14 @@ const bar = (card: Card, top: number, height: number, ink: string) => {
       return rect
     })
     .join('')
-  const tick =
-    card.compactAt === null || card.compactAt >= reading.window
-      ? ''
-      : `<rect x="${(card.compactAt * scale).toFixed(1)}" y="${top}" width="2" height="${height}" fill="${ink}" fill-opacity="0.8"/>`
 
-  return `<defs><clipPath id="bar"><rect y="${top}" width="${WIDTH}" height="${height}" rx="${Math.min(5, height / 2)}"/></clipPath></defs><g clip-path="url(#bar)"><rect y="${top}" width="${WIDTH}" height="${height}" fill="${ink}" fill-opacity="0.14"/>${segments}${tick}</g>`
+  return `<defs><clipPath id="bar"><rect y="${top}" width="${WIDTH}" height="${height}" rx="${Math.min(5, height / 2)}"/></clipPath></defs><g clip-path="url(#bar)"><rect y="${top}" width="${WIDTH}" height="${height}" fill="${ink}" fill-opacity="0.14"/>${segments}</g>`
 }
 
 const legend = (card: Card, top: number, inks: Inks) => {
   const { reading } = card
-  const free = Math.max(0, reading.window - reading.tokens)
+  const room = roomOf(reading, card.compactAt)
+  const free = Math.max(0, room - reading.tokens)
   const rows = [...slices(card.categories), { name: 'free', tokens: free, color: '' }]
   const column = WIDTH / COLUMNS
 
@@ -124,7 +121,7 @@ const legend = (card: Card, top: number, inks: Inks) => {
           ? `<rect x="${x}" y="${y - 10}" width="10" height="10" rx="2.5" fill="${inks.muted}" fill-opacity="0.3"/>`
           : `<rect x="${x}" y="${y - 10}" width="10" height="10" rx="2.5" fill="${one.color}"/>`
 
-      return `${swatch}<text x="${x + 17}" y="${y}"><tspan fill="${inks.secondary}">${escape(one.name)}</tspan><tspan dx="7" fill="${inks.primary}" font-weight="600">${compact(one.tokens)}</tspan><tspan dx="7" fill="${inks.muted}">${escape(share(one.tokens, reading.window))}</tspan></text>`
+      return `${swatch}<text x="${x + 17}" y="${y}"><tspan fill="${inks.secondary}">${escape(one.name)}</tspan><tspan dx="7" fill="${inks.primary}" font-weight="600">${compact(one.tokens)}</tspan><tspan dx="7" fill="${inks.muted}">${escape(share(one.tokens, room))}</tspan></text>`
     })
     .join('')
 }
@@ -162,8 +159,10 @@ const footer = (card: Card, y: number, inks: Inks) => {
 export const altOf = (card: Card) => {
   const { reading } = card
   const top = [...slices(card.categories)].sort((a, b) => b.tokens - a.tokens)[0]
+  const room = roomOf(reading, card.compactAt)
+  const of = room === reading.window ? `${compact(room)} tokens` : `the ${compact(room)} it compacts at`
 
-  return `Context ${reading.percent}% full: ${compact(reading.tokens)} of ${compact(reading.window)} tokens${top === undefined ? '' : `, most of it ${top.name}`}.`
+  return `Context ${fullness(reading, card.compactAt)}% full: ${compact(reading.tokens)} of ${of}${top === undefined ? '' : `, most of it ${top.name}`}.`
 }
 
 /**
@@ -185,7 +184,7 @@ export const cardSvg = (card: Card) => {
     card.isCompact && brief.length > 0
       ? `<text x="${WIDTH - 60}" y="14" text-anchor="end" font-size="11.5" fill="${inks.muted}">${brief.join(' · ')}</text>`
       : ''
-  const header = `<rect x="1.5" y="4.5" width="8" height="8" rx="1.5" transform="rotate(45 5.5 8.5)" fill="${status.fill}"/><text x="18" y="14"><tspan fill="${inks.primary}" font-weight="700">context</tspan><tspan dx="7" fill="${inks.primary}" font-weight="700">${compact(reading.tokens)}</tspan><tspan dx="7" fill="${inks.muted}">of ${compact(reading.window)}</tspan>${compactsAt}</text>${aside}<rect x="${WIDTH - 48}" y="0" width="48" height="20" rx="10" fill="${status.fill}"/><text x="${WIDTH - 24}" y="14" text-anchor="middle" font-weight="700" fill="${status.ink}">${reading.percent}%</text>`
+  const header = `<rect x="1.5" y="4.5" width="8" height="8" rx="1.5" transform="rotate(45 5.5 8.5)" fill="${status.fill}"/><text x="18" y="14"><tspan fill="${inks.primary}" font-weight="700">context</tspan><tspan dx="7" fill="${inks.primary}" font-weight="700">${compact(reading.tokens)}</tspan><tspan dx="7" fill="${inks.muted}">of ${compact(reading.window)}</tspan>${compactsAt}</text>${aside}<rect x="${WIDTH - 48}" y="0" width="48" height="20" rx="10" fill="${status.fill}"/><text x="${WIDTH - 24}" y="14" text-anchor="middle" font-weight="700" fill="${status.ink}">${fullness(reading, card.compactAt)}%</text>`
   const barHeight = card.isCompact ? 8 : 18
   const legendTop = BAR_TOP + barHeight + 24
   const rows = Math.ceil((slices(card.categories).length + 1) / COLUMNS)

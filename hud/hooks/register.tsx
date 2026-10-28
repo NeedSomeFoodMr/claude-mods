@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Category, Reading, Standing, Usage } from '../types'
 import { aheadOf, baseNameOf, besideOf, nameOf, statusOf } from './branch'
 import { altOf, cardSvg, standingAlt, standingSvg } from './chart'
-import { compact, crossed, gauge, levelOf, longLimit, money, resetsIn, shortLimit } from './format'
+import { compact, crossed, fullness, gauge, levelOf, longLimit, money, resetsIn, roomOf, shortLimit } from './format'
 import { portsOf, urlOf } from './probe'
 
 const HISTORY = 40
@@ -81,7 +81,7 @@ const record = async ($: EngineInterface, isTurn: boolean) => {
     const wasCalm = last === undefined || ['good', 'warning'].includes(levelOf(last, threshold))
 
     if (isTurn && wasCalm && !['good', 'warning'].includes(levelOf(reading, threshold))) {
-      $.ui.toast(`Context at ${reading.percent}%: a good moment to /compact`)
+      $.ui.toast(`Context at ${fullness(reading, threshold)}%: a good moment to /compact`)
     }
   }
 
@@ -384,14 +384,17 @@ export const register: Register = on => {
 
     if (e.surface !== 'desktop') {
       const { Box, Text } = $.ui.resolve(e)
+      // Counted to where compaction runs, as the card is.
+      const threshold = await read($, compactAt)
+      const full = fullness(reading, threshold)
 
       return (
         <Box flexDirection="column">
           <Box gap={1}>
-            <Text bold>{reading.percent}%</Text>
-            <Text>{gauge(reading.percent, 16)}</Text>
+            <Text bold>{full}%</Text>
+            <Text>{gauge(full, 16)}</Text>
             <Text dimColor>
-              {compact(reading.tokens)} / {compact(reading.window)}
+              {compact(reading.tokens)} / {compact(roomOf(reading, threshold))}
               {(spent?.limits ?? []).map(one => DOT + shortLimit(one)).join('')}
               {spent?.usd === undefined ? '' : DOT + money(spent.usd)}
               {served === null ? '' : DOT + (served.up.length > 0 ? `dev :${served.up.join(' :')}` : 'dev down')}

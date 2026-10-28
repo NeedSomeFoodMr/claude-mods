@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import { aheadOf, baseNameOf, besideOf, nameOf, statusOf } from '../hooks/branch'
 import { altOf, cardSvg, slices, standingAlt, standingSvg } from '../hooks/chart'
 import type { Card } from '../hooks/chart'
-import { compact, crossed, levelOf, resetsIn, share, shortLimit } from '../hooks/format'
+import { compact, crossed, fullness, levelOf, resetsIn, roomOf, share, shortLimit } from '../hooks/format'
 import { portsOf } from '../hooks/probe'
 
 const at = (percent: number) => ({ percent, tokens: percent * 10_000, window: 1_000_000 })
@@ -107,6 +107,16 @@ test('rates the window against where compaction runs', () => {
   expect(levelOf(at(62), null)).toBe('warning')
 })
 
+test('measures fullness against where compaction runs, the whole window where none is named', () => {
+  expect(fullness(at(35), 750_000)).toBe(47)
+  expect(fullness(at(35), null)).toBe(35)
+  // A compaction point at or past the window is no point at all.
+  expect(fullness(at(35), 1_000_000)).toBe(35)
+  expect(fullness(at(35), 2_000_000)).toBe(35)
+  expect(roomOf(at(35), 750_000)).toBe(750_000)
+  expect(roomOf(at(35), null)).toBe(1_000_000)
+})
+
 test('a category keeps its colour whatever its size, the unnamed fold into other', () => {
   const drawn = slices(FILLING)
 
@@ -124,9 +134,17 @@ test('draws the card: header, pill, bar, legend and the line beneath', () => {
   expect(svg).toContain('>352k</tspan>')
   expect(svg).toContain('· compacts at 750k')
   expect(svg).toContain('fill="#0ca30c"')
-  expect(svg).toContain('>35%</text>')
+  // The pill, the bar and the legend count to the compaction point, not the whole window.
+  expect(svg).toContain('>47%</text>')
   expect(svg).toContain('>messages</tspan>')
   expect(svg).toContain('>free</tspan>')
+  expect(svg).toContain('>398k</tspan>')
+  expect(svg).toContain('>38%</tspan>')
+  // The bar ends where compaction runs, so it draws no tick.
+  expect(svg).not.toContain('width="2"')
+  // With no compaction point named, the whole window is the measure.
+  expect(cardSvg({ ...CARD, compactAt: null })).toContain('>35%</text>')
+  expect(altOf({ ...CARD, compactAt: null })).toBe('Context 35% full: 352k of 1.0M tokens, most of it messages.')
   // A share under one percent prints `<1%`: escaped, or the drawing is not XML.
   expect(cardSvg({ ...CARD, categories: [...FILLING, { name: 'Memory files', tokens: 170 }] })).toContain('>&lt;1%</tspan>')
   expect(svg.replace(/<\/?[a-zA-Z][^<>]*>/g, '')).not.toMatch(/[<>]/)
@@ -134,7 +152,7 @@ test('draws the card: header, pill, bar, legend and the line beneath', () => {
   expect(svg).toContain('resets in 42m')
   expect(svg).toContain('$7.94')
   expect(svg).toContain('dev server down')
-  expect(altOf(CARD)).toBe('Context 35% full: 352k of 1.0M tokens, most of it messages.')
+  expect(altOf(CARD)).toBe('Context 47% full: 352k of the 750k it compacts at, most of it messages.')
 })
 
 test('the one-line form keeps the header and the bar, with the limits beside the pill', () => {
@@ -265,7 +283,7 @@ test('the band is the card on the desktop and one line of text in a terminal', a
   expect(
     await terminal.find({
       type: 'Text',
-      text: /352k \/ 1\.0M · 5h 23% · wk 18% · \$9\.10 · dev :3000 · on feature\/x \(3 ahead of main, 1 behind · 1 changed\)/,
+      text: /352k \/ 750k · 5h 23% · wk 18% · \$9\.10 · dev :3000 · on feature\/x \(3 ahead of main, 1 behind · 1 changed\)/,
     }),
   ).toBeDefined()
 
@@ -273,8 +291,8 @@ test('the band is the card on the desktop and one line of text in a terminal', a
   // still the old window, so the conversation is what the compaction left.
   await $.session.compact({ trigger: 'manual', messages: [SUMMARY] })
   await clock.advance(400)
-  expect(await terminal.find({ type: 'Text', text: /77k \/ 1\.0M/ })).toBeDefined()
-  expect(await terminal.find({ type: 'Text', text: '8%' })).toBeDefined()
+  expect(await terminal.find({ type: 'Text', text: /77k \/ 750k/ })).toBeDefined()
+  expect(await terminal.find({ type: 'Text', text: '10%' })).toBeDefined()
   await terminal.unmount()
 })
 

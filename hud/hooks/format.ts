@@ -43,11 +43,22 @@ export const crossed = (before: Limit | undefined, after: Limit) =>
   [...WARN_AT].reverse().find(mark => after.percent >= mark && (before?.percent ?? 0) < mark)
 
 /**
- * How near compaction the window is: measured against the token count
- * compaction runs at when the engine names one, the whole window otherwise.
+ * The room the conversation has: the token count compaction runs at when the
+ * engine names one inside the window, the whole window otherwise.
  */
+export const roomOf = (reading: Reading, compactAt: number | null) =>
+  compactAt !== null && compactAt > 0 && compactAt < reading.window ? compactAt : reading.window
+
+/** How full the room is, as a whole percentage: what the pill and the gauge show. */
+export const fullness = (reading: Reading, compactAt: number | null) => {
+  const room = roomOf(reading, compactAt)
+
+  return room === reading.window ? reading.percent : Math.round((reading.tokens / room) * 100)
+}
+
+/** How near compaction the window is, measured against the room it has. */
 export const levelOf = (reading: Reading, compactAt: number | null): Level => {
-  const ratio = reading.tokens / Math.max(1, compactAt ?? reading.window)
+  const ratio = reading.tokens / Math.max(1, roomOf(reading, compactAt))
 
   if (ratio >= 0.92) return 'critical'
   if (ratio >= 0.8) return 'serious'
